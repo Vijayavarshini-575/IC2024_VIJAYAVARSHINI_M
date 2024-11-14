@@ -1,0 +1,98 @@
+CODE:
+
+module modN_ctr
+#(
+    parameter N = 45,
+    parameter WIDTH = 6 
+)
+(
+    input clk,           
+    input rst,           
+    input enable,         
+    output reg [WIDTH-1:0] count,    
+    output reg counted_max
+);
+
+reg toggle;
+
+always @ (posedge clk or negedge rst) begin
+    if (!rst) begin
+        count <= 0;
+        counted_max <= 0;
+        toggle <= 0;
+    end else if (enable) begin
+        if (count == N-1) begin 
+            count <= 0;
+            counted_max <= toggle;
+            toggle <= ~toggle; 
+        end else begin
+            count <= count + 1;
+            counted_max <= 0;
+        end
+    end
+end
+
+endmodule
+
+
+TESTBENCH:
+
+`timescale 1ns / 1ps
+
+module tb_modN_ctr;
+
+    parameter N = 45;
+    parameter WIDTH = 6;
+
+    reg clk;
+    reg rst;
+    reg enable;
+    wire [WIDTH-1:0] count;
+    wire counted_max;
+
+    modN_ctr #(
+        .N(N),
+        .WIDTH(WIDTH)
+    ) uut (
+        .clk(clk),
+        .rst(rst),
+        .enable(enable),
+        .count(count),
+        .counted_max(counted_max)
+    );
+
+    initial begin
+        clk = 0;
+        forever #100 clk = ~clk; // Toggle every 100 ns for a 5 MHz clock
+    end
+
+    initial begin
+        rst = 0;
+        enable = 0;
+
+        #10 rst = 1; 
+
+        #10 enable = 1;
+
+        repeat (50) @(posedge clk); 
+
+        enable = 0;
+        @(posedge clk);
+       
+        enable = 1;
+    
+        repeat (50) @(posedge clk);
+
+        $finish;
+    end
+
+    initial begin
+        $dumpfile("dump.vcd");   
+        $dumpvars(0, tb_modN_ctr); 
+    end
+
+    initial begin
+        $monitor("Time: %0t | Count: %0d | Counted Max: %b", $time, count, counted_max);
+    end
+
+endmodule
